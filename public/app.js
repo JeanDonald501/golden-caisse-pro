@@ -8,6 +8,26 @@ if (API_BASE.startsWith('file://') || API_BASE === 'null' || !API_BASE) {
   API_BASE = 'http://localhost:8000';
 }
 
+// Fetch helper with timeout to prevent hanging on incorrect server URLs
+async function fetchWithTimeout(resource, options = {}) {
+  const { timeout = 3000 } = options;
+  
+  const controller = new AbortController();
+  const id = setTimeout(() => controller.abort(), timeout);
+  
+  try {
+    const response = await fetch(resource, {
+      ...options,
+      signal: controller.signal
+    });
+    clearTimeout(id);
+    return response;
+  } catch (err) {
+    clearTimeout(id);
+    throw err;
+  }
+}
+
 // Application Global State
 let state = {
   currentUser: null, // { id, username, name, role }
@@ -45,7 +65,7 @@ async function initApp() {
 
   // Check if system setup is needed
   try {
-    const res = await fetch(`${API_BASE}/api/auth/setup_needed`);
+    const res = await fetchWithTimeout(`${API_BASE}/api/auth/setup_needed`, { timeout: 3000 });
     const data = await res.json();
     
     // Save working server URL
@@ -70,6 +90,14 @@ async function initApp() {
     // Show connection error screen
     const urlInput = document.getElementById('server-url-input');
     if (urlInput) urlInput.value = API_BASE;
+    
+    // Reset connection button
+    const btn = document.querySelector('#connection-config-form button[type="submit"]');
+    if (btn) {
+      btn.disabled = false;
+      btn.textContent = "Tenter la connexion";
+    }
+    
     showScreen('connection-error-screen');
   }
 }
@@ -404,6 +432,13 @@ function setupEventHandlers() {
       if (url.endsWith('/')) {
         url = url.slice(0, -1);
       }
+      
+      const btn = connForm.querySelector('button[type="submit"]');
+      if (btn) {
+        btn.disabled = true;
+        btn.textContent = "Connexion en cours...";
+      }
+
       API_BASE = url;
       initApp();
     });
