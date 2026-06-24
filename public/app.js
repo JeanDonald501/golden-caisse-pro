@@ -139,7 +139,19 @@ function launchUserSession() {
 async function syncDataTick() {
   if (!state.currentUser) return;
   try {
-    const res = await fetch(`${API_BASE}/api/sync`);
+    const username = encodeURIComponent(state.currentUser.username);
+    const token = encodeURIComponent(state.currentUser.session_token || '');
+    const res = await fetch(`${API_BASE}/api/sync?username=${username}&session_token=${token}`);
+    
+    if (res.status === 401) {
+      clearInterval(state.syncInterval);
+      state.currentUser = null;
+      localStorage.removeItem('gcp_user');
+      alert("Votre session a expiré ou a été déconnectée (connexion sur un autre poste ou compte désactivé).");
+      showScreen('login-screen');
+      return;
+    }
+
     const currentSync = await res.json();
     
     // Check if anything changed
@@ -861,10 +873,79 @@ function setupEventHandlers() {
       alert("Erreur.");
     }
   });
+
+  // Edit User agent form
+  document.getElementById('edit-user-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const id = document.getElementById('edit-user-id').value;
+    const name = document.getElementById('edit-user-name').value;
+    const username = document.getElementById('edit-user-username').value;
+    const password = document.getElementById('edit-user-password').value;
+    const role = document.getElementById('edit-user-role').value;
+    const is_active = document.getElementById('edit-user-active').value;
+
+    try {
+      const res = await fetch(`${API_BASE}/api/users/update`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id, name, username, password, role, is_active })
+      });
+      const data = await res.json();
+      if (data.success) {
+        alert(data.message);
+        closeModals();
+        refreshActiveUsers();
+      } else {
+        alert(data.error);
+      }
+    } catch (err) {
+      alert("Erreur lors de la modification de l'agent.");
+    }
+  });
+
+  // User Actions Event Delegation (Edit, Toggle Status, Delete)
+  const tbody = document.getElementById('active-agents-list');
+  if (tbody) {
+    tbody.addEventListener('click', (e) => {
+      const btnEdit = e.target.closest('.btn-edit-user');
+      const btnToggle = e.target.closest('.btn-toggle-user');
+      const btnDelete = e.target.closest('.btn-delete-user');
+      
+      if (btnEdit) {
+        openEditUserModal(
+          btnEdit.dataset.id,
+          btnEdit.dataset.name,
+          btnEdit.dataset.username,
+          btnEdit.dataset.role,
+          btnEdit.dataset.active
+        );
+      }
+      if (btnToggle) {
+        toggleUserStatus(btnToggle.dataset.id, btnToggle.dataset.active);
+      }
+      if (btnDelete) {
+        deleteUser(btnDelete.dataset.id);
+      }
+    });
+  }
 }
 
 // Log out user
-function logout() {
+async function logout() {
+  if (state.currentUser) {
+    try {
+      await fetch(`${API_BASE}/api/auth/logout`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          username: state.currentUser.username,
+          session_token: state.currentUser.session_token
+        })
+      });
+    } catch (err) {
+      console.error("Error logging out from server", err);
+    }
+  }
   state.currentUser = null;
   localStorage.removeItem('gcp_user');
   if (state.syncInterval) clearInterval(state.syncInterval);
@@ -1593,15 +1674,98 @@ async function refreshActiveUsers() {
     
     users.forEach(u => {
       const tr = document.createElement('tr');
+      
+      const roleText = u.role === 'raf' ? 'RAF' : 'Caissière';
+      const roleBadge = u.role === 'raf' ? 'badge-raf' : '';
+      
+      const statusText = u.is_active === 1 ? 'Actif' : 'Inactif';
+      const statusBadge = u.is_active === 1 ? 'badge-open' : 'badge-closed';
+      
       tr.innerHTML = `
         <td><b>${u.name}</b></td>
         <td><code>${u.username}</code></td>
-        <td><span class="user-role-badge ${u.role === 'raf' ? 'badge-raf' : ''}">${u.role === 'raf' ? 'RAF' : 'Caissière'}</span></td>
+        <td><span class="user-role-badge ${roleBadge}">${roleText}</span></td>
+        <td><span class="badge ${statusBadge}">${statusText}</span></td>
+        <td class="text-right">
+          <button class="btn btn-sm btn-secondary btn-edit-user" data-id="${u.id}" data-name="${u.name}" data-username="${u.username}" data-role="${u.role}" data-active="${u.is_active}">Modifier</button>
+          <button class="btn btn-sm ${u.is_active === 1 ? 'btn-warning' : 'btn-success'} btn-toggle-user" data-id="${u.id}" data-active="${u.is_active}">${u.is_active === 1 ? 'Désactiver' : 'Activer'}</button>
+          <button class="btn btn-sm btn-danger btn-delete-user" data-id="${u.id}">Supprimer</button>
+        </td>
       `;
       tbody.appendChild(tr);
     });
   } catch (err) {
     console.error(err);
+  }
+}
+
+// Open user editing modal
+function openEditUserModal(id, name, username, role, is_active) {
+  document.getElementById('edit-user-id').value = id;
+  document.getElementById('edit-user-name').value = name;
+  document.getElementById('edit-user-username').value = username;
+  document.getElementById('edit-user-password').value = '';
+  document.getElementById('edit-user-role').value = role;
+  document.getElementById('edit-user-active').value = is_active;
+  openModal('modal-edit-user');
+}
+
+// Toggle user status
+async function toggleUserStatus(id, currentActive) {
+  const newActive = currentActive === '1' ? 0 : 1;
+  const actionText = newActive === 1 ? "activer" : "désactiver";
+  if (!confirm(`Voulez-vous vraiment ${actionText} cet agent ?`)) return;
+
+  try {
+    const res = await fetch(`${API_BASE}/api/users`);
+    const users = await res.json();
+    const user = users.find(u => u.id == id);
+    if (!user) return;
+
+    const updateRes = await fetch(`${API_BASE}/api/users/update`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        id: user.id,
+        username: user.username,
+        name: user.name,
+        role: user.role,
+        is_active: newActive
+      })
+    });
+    const updateData = await updateRes.json();
+    if (updateData.success) {
+      alert(updateData.message);
+      refreshActiveUsers();
+    } else {
+      alert(updateData.error);
+    }
+  } catch (err) {
+    console.error(err);
+    alert("Erreur lors de la modification du statut.");
+  }
+}
+
+// Delete user agent
+async function deleteUser(id) {
+  if (!confirm("Voulez-vous vraiment supprimer définitivement cet agent ? Cette action est irréversible.")) return;
+
+  try {
+    const res = await fetch(`${API_BASE}/api/users/delete`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id })
+    });
+    const data = await res.json();
+    if (data.success) {
+      alert(data.message);
+      refreshActiveUsers();
+    } else {
+      alert(data.error);
+    }
+  } catch (err) {
+    console.error(err);
+    alert("Erreur lors de la suppression de l'agent.");
   }
 }
 

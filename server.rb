@@ -4,6 +4,7 @@ require 'json'
 require 'fileutils'
 require 'socket'
 require 'date'
+require 'securerandom'
 
 STDOUT.sync = true
 
@@ -34,9 +35,24 @@ def init_db
       username TEXT UNIQUE,
       password TEXT,
       name TEXT,
-      role TEXT
+      role TEXT,
+      is_active INTEGER DEFAULT 1,
+      session_token TEXT DEFAULT NULL,
+      last_active_at TEXT DEFAULT NULL
     );
   SQL
+
+  # Run migrations for existing users table
+  columns = db.execute("PRAGMA table_info(users)").map { |row| row['name'] }
+  unless columns.include?('is_active')
+    db.execute("ALTER TABLE users ADD COLUMN is_active INTEGER DEFAULT 1")
+  end
+  unless columns.include?('session_token')
+    db.execute("ALTER TABLE users ADD COLUMN session_token TEXT DEFAULT NULL")
+  end
+  unless columns.include?('last_active_at')
+    db.execute("ALTER TABLE users ADD COLUMN last_active_at TEXT DEFAULT NULL")
+  end
 
   db.execute <<-SQL
     CREATE TABLE IF NOT EXISTS cash_days (
@@ -230,18 +246,54 @@ class APIServlet < WEBrick::HTTPServlet::AbstractServlet
 
         user = db.get_first_row("SELECT * FROM users WHERE username = ? AND password = ?", [username, password])
         if user
+          if user['is_active'] == 0
+            send_error(res, 403, "Ce compte est inactif. Veuillez contacter le RAF.")
+            return
+          end
+
+          # Check concurrent session
+          now = Time.now
+          session_timeout = 15 # seconds
+          if user['session_token'] && user['last_active_at']
+            begin
+              last_active = Time.parse(user['last_active_at'])
+              if (now - last_active) < session_timeout
+                send_error(res, 409, "Cet utilisateur est déjà connecté sur un autre poste.")
+                return
+              end
+            rescue
+              # Ignore date parsing errors
+            end
+          end
+
+          # Generate session token
+          token = SecureRandom.hex(16)
+          now_str = now.strftime('%Y-%m-%d %H:%M:%S')
+          db.execute("UPDATE users SET session_token = ?, last_active_at = ? WHERE id = ?", [token, now_str, user['id']])
+
           send_json(res, 200, {
             success: true,
             user: {
               id: user['id'],
               username: user['username'],
               name: user['name'],
-              role: user['role']
+              role: user['role'],
+              session_token: token
             }
           })
         else
           send_error(res, 401, "Identifiants incorrects. Veuillez réessayer.")
         end
+      else
+        send_error(res, 405, "Méthode non autorisée")
+      end
+
+    when '/api/auth/logout'
+      if method == 'POST'
+        username = body_data['username']
+        session_token = body_data['session_token']
+        db.execute("UPDATE users SET session_token = NULL, last_active_at = NULL WHERE username = ? AND session_token = ?", [username, session_token])
+        send_json(res, 200, { success: true })
       else
         send_error(res, 405, "Méthode non autorisée")
       end
@@ -267,7 +319,7 @@ class APIServlet < WEBrick::HTTPServlet::AbstractServlet
     # ================= USER MANAGEMENT =================
     when '/api/users'
       if method == 'GET'
-        users = db.execute("SELECT id, username, name, role FROM users")
+        users = db.execute("SELECT id, username, name, role, is_active FROM users")
         send_json(res, 200, users)
       elsif method == 'POST'
         username = body_data['username']
@@ -281,11 +333,71 @@ class APIServlet < WEBrick::HTTPServlet::AbstractServlet
         end
 
         begin
-          db.execute("INSERT INTO users (username, password, name, role) VALUES (?, ?, ?, ?)", [username, password, name, role])
+          db.execute("INSERT INTO users (username, password, name, role, is_active) VALUES (?, ?, ?, ?, 1)", [username, password, name, role])
           send_json(res, 200, { success: true, message: "Agent créé avec succès." })
         rescue SQLite3::ConstraintException
           send_error(res, 400, "Cet identifiant est déjà utilisé.")
         end
+      else
+        send_error(res, 405, "Méthode non autorisée")
+      end
+
+    when '/api/users/update'
+      if method == 'POST'
+        id = body_data['id'].to_i
+        username = body_data['username']
+        name = body_data['name']
+        role = body_data['role']
+        is_active = body_data['is_active'].to_i
+        password = body_data['password']
+
+        if !username || !name || !role
+          send_error(res, 400, "Veuillez remplir tous les champs obligatoires.")
+          return
+        end
+
+        # Check if the user is the last active RAF
+        target_user = db.get_first_row("SELECT * FROM users WHERE id = ?", [id])
+        if target_user && target_user['role'] == 'raf'
+          if role != 'raf' || is_active == 0
+            raf_count = db.get_first_row("SELECT COUNT(*) as count FROM users WHERE role = 'raf' AND is_active = 1")['count']
+            if raf_count <= 1 && target_user['is_active'] == 1
+              send_error(res, 400, "Action impossible : il doit rester au moins un compte RAF actif.")
+              return
+            end
+          end
+        end
+
+        begin
+          if password && password != ''
+            db.execute("UPDATE users SET username = ?, name = ?, role = ?, is_active = ?, password = ?, session_token = NULL WHERE id = ?", [username, name, role, is_active, password, id])
+          else
+            db.execute("UPDATE users SET username = ?, name = ?, role = ?, is_active = ?, session_token = NULL WHERE id = ?", [username, name, role, is_active, id])
+          end
+          send_json(res, 200, { success: true, message: "Agent mis à jour avec succès." })
+        rescue SQLite3::ConstraintException
+          send_error(res, 400, "Cet identifiant est déjà utilisé par un autre agent.")
+        end
+      else
+        send_error(res, 405, "Méthode non autorisée")
+      end
+
+    when '/api/users/delete'
+      if method == 'POST'
+        id = body_data['id'].to_i
+
+        # Check if the user is the last active RAF
+        target_user = db.get_first_row("SELECT * FROM users WHERE id = ?", [id])
+        if target_user && target_user['role'] == 'raf' && target_user['is_active'] == 1
+          raf_count = db.get_first_row("SELECT COUNT(*) as count FROM users WHERE role = 'raf' AND is_active = 1")['count']
+          if raf_count <= 1
+            send_error(res, 400, "Action impossible : impossible de supprimer le dernier compte RAF actif.")
+            return
+          end
+        end
+
+        db.execute("DELETE FROM users WHERE id = ?", [id])
+        send_json(res, 200, { success: true, message: "Agent supprimé avec succès." })
       else
         send_error(res, 405, "Méthode non autorisée")
       end
@@ -834,6 +946,21 @@ class APIServlet < WEBrick::HTTPServlet::AbstractServlet
       })
 
     when '/api/sync'
+      # Validate user session heartbeat
+      username = query_params['username']
+      session_token = query_params['session_token']
+
+      if username && session_token
+        user = db.get_first_row("SELECT * FROM users WHERE username = ?", [username])
+        if !user || user['is_active'] == 0 || user['session_token'] != session_token
+          send_error(res, 401, "Session expirée ou compte inactif.")
+          return
+        end
+        # Update last_active_at
+        now_str = Time.now.strftime('%Y-%m-%d %H:%M:%S')
+        db.execute("UPDATE users SET last_active_at = ? WHERE id = ?", [now_str, user['id']])
+      end
+
       # Light-weight sync state
       last_tx = db.get_first_row("SELECT MAX(id) as max_id FROM transactions")
       last_tx_id = last_tx ? last_tx['max_id'].to_i : 0

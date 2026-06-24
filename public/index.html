@@ -674,7 +674,7 @@
                 <button type="submit" class="btn btn-success">Ajouter le Nouvel Agent</button>
               </form>
 
-              <h4>Liste des Agents Actifs</h4>
+              <h4>Liste des Agents</h4>
               <div class="table-responsive select-limit-height">
                 <table class="data-table compact">
                   <thead>
@@ -682,6 +682,8 @@
                       <th>Nom complet</th>
                       <th>Identifiant</th>
                       <th>Rôle</th>
+                      <th>Statut</th>
+                      <th class="text-right">Actions</th>
                     </tr>
                   </thead>
                   <tbody id="active-agents-list">
@@ -980,6 +982,51 @@
         <div class="modal-footer">
           <button type="button" class="btn btn-secondary modal-cancel">Annuler</button>
           <button type="submit" class="btn btn-danger">Valider et Fermer la Caisse</button>
+        </div>
+      </form>
+    </div>
+
+    <!-- Modal 7: Modifier un Agent -->
+    <div id="modal-edit-user" class="modal-box hidden">
+      <div class="modal-header">
+        <h3>Modifier l'Agent</h3>
+        <button class="modal-close">&times;</button>
+      </div>
+      <form id="edit-user-form">
+        <input type="hidden" id="edit-user-id">
+        <div class="input-group">
+          <label for="edit-user-name">Nom Complet de l'Agent</label>
+          <input type="text" id="edit-user-name" required placeholder="ex: Alice Konan">
+        </div>
+        <div class="row-inputs">
+          <div class="input-group">
+            <label for="edit-user-username">Identifiant de connexion</label>
+            <input type="text" id="edit-user-username" required placeholder="ex: alice.caisse">
+          </div>
+          <div class="input-group">
+            <label for="edit-user-password">Nouveau mot de passe (optionnel)</label>
+            <input type="password" id="edit-user-password" placeholder="Laissez vide si inchangé">
+          </div>
+        </div>
+        <div class="row-inputs">
+          <div class="input-group">
+            <label for="edit-user-role">Rôle de l'Agent</label>
+            <select id="edit-user-role" required>
+              <option value="caissiere">Caissière (Accès Caisses)</option>
+              <option value="raf">RAF (Accès Audit / Contrôle)</option>
+            </select>
+          </div>
+          <div class="input-group">
+            <label for="edit-user-active">Statut</label>
+            <select id="edit-user-active" required>
+              <option value="1">Actif</option>
+              <option value="0">Inactif</option>
+            </select>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary modal-cancel">Annuler</button>
+          <button type="submit" class="btn btn-primary">Enregistrer les Modifications</button>
         </div>
       </form>
     </div>
