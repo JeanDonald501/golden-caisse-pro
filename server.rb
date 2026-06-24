@@ -1006,16 +1006,21 @@ server.mount '/api', APIServlet
 
 # Detect local IP address for multi-workstation usage
 local_ips = Socket.ip_address_list.select { |ip| ip.ipv4? && !ip.ipv4_loopback? }.map(&:ip_address)
+hostname = Socket.gethostname rescue nil
 
 puts "=========================================================="
 puts "  GOLDEN CAISSE PRO - SERVEUR DE SYNC DEMARRÉ"
 puts "=========================================================="
 puts "  Accès local: http://localhost:#{port}"
+if hostname
+  local_domain = hostname.include?('.') ? hostname : "#{hostname}.local"
+  puts "  Accès réseau (Nom fixe) : http://#{local_domain}:#{port}"
+end
 if local_ips.empty?
-  puts "  Accès réseau: Non connecté à un réseau local."
+  puts "  Accès réseau : Non connecté à un réseau local."
 else
   local_ips.each do |ip|
-    puts "  Accès réseau: http://#{ip}:#{port}"
+    puts "  Accès réseau (IP temporaire) : http://#{ip}:#{port}"
   end
 end
 puts "  Appuyez sur Ctrl+C pour arrêter le serveur."
