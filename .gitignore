@@ -1,0 +1,14 @@
+# Database files
+data.db
+data.db-journal
+data.db-wal
+data.db-shm
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db

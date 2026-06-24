@@ -1,0 +1,1229 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Golden Caisse Pro - Tenue de Caisse Palace Hôtel</title>
+  <!-- Google Fonts: Inter -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <!-- CSS Stylesheet -->
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <!-- ================= SERVER CONNECTION ERROR SCREEN ================= -->
+  <div id="connection-error-screen" class="screen hidden">
+    <div class="glass-card compact-card auth-card">
+      <div class="auth-header">
+        <div class="logo">🔌</div>
+        <h1>Erreur de Connexion</h1>
+        <p>Impossible de se connecter au serveur de synchronisation Golden Caisse Pro.</p>
+      </div>
+      <div class="info-bubble warning margin-bottom-lg">
+        <p>Assurez-vous que le serveur est démarré sur le poste principal en exécutant la commande :</p>
+        <code style="display:block;margin-top:5px;background:#fff;padding:5px;border-radius:4px;font-family:monospace;">ruby server.rb</code>
+      </div>
+      <form id="connection-config-form">
+        <div class="input-group">
+          <label for="server-url-input">Adresse du Serveur</label>
+          <input type="url" id="server-url-input" required placeholder="ex: http://localhost:8000">
+        </div>
+        <button type="submit" class="btn btn-primary btn-block">Tenter la connexion</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- ================= SETUP / WELCOME SCREEN ================= -->
+  <div id="setup-screen" class="screen hidden">
+    <div class="glass-card compact-card auth-card">
+      <div class="auth-header">
+        <div class="logo">👑</div>
+        <h1>Golden Caisse Pro</h1>
+        <p>Configuration initiale du GOLDEN PALACE HÔTEL</p>
+      </div>
+      <form id="setup-form">
+        <fieldset>
+          <legend>Informations sur l'Établissement</legend>
+          <div class="input-group">
+            <label for="setup-company-name">Nom de l'Hôtel *</label>
+            <input type="text" id="setup-company-name" required value="GOLDEN PALACE HÔTEL">
+          </div>
+          <div class="input-group">
+            <label for="setup-company-address">Adresse</label>
+            <input type="text" id="setup-company-address" placeholder="ex: Boulevard de la Caisse, Lomé">
+          </div>
+          <div class="row-inputs">
+            <div class="input-group">
+              <label for="setup-company-phone">Téléphone</label>
+              <input type="text" id="setup-company-phone" placeholder="ex: +228 90 00 00 00">
+            </div>
+            <div class="input-group">
+              <label for="setup-company-email">Email</label>
+              <input type="email" id="setup-company-email" placeholder="ex: contact@goldenpalace.com">
+            </div>
+          </div>
+        </fieldset>
+
+        <fieldset>
+          <legend>Compte Administrateur (RAF)</legend>
+          <div class="input-group">
+            <label for="setup-admin-name">Nom Complet du RAF *</label>
+            <input type="text" id="setup-admin-name" required placeholder="ex: Jean Dupont">
+          </div>
+          <div class="row-inputs">
+            <div class="input-group">
+              <label for="setup-admin-user">Identifiant de Connexion *</label>
+              <input type="text" id="setup-admin-user" required placeholder="ex: admin.raf">
+            </div>
+            <div class="input-group">
+              <label for="setup-admin-pass">Mot de passe *</label>
+              <input type="password" id="setup-admin-pass" required placeholder="••••••••">
+            </div>
+          </div>
+        </fieldset>
+
+        <button type="submit" class="btn btn-primary btn-block">Initialiser l'Application</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- ================= LOGIN SCREEN ================= -->
+  <div id="login-screen" class="screen">
+    <div class="glass-card compact-card auth-card">
+      <div class="auth-header">
+        <div class="logo">👑</div>
+        <h1>Golden Caisse Pro</h1>
+        <p>Gestion financière & Tenue de caisse</p>
+        <span class="hotel-sub">GOLDEN PALACE HÔTEL</span>
+      </div>
+      <form id="login-form">
+        <div class="input-group">
+          <label for="login-username">Identifiant</label>
+          <input type="text" id="login-username" required placeholder="Entrez votre identifiant">
+        </div>
+        <div class="input-group">
+          <label for="login-password">Mot de passe</label>
+          <input type="password" id="login-password" required placeholder="Entrez votre mot de passe">
+        </div>
+        <button type="submit" class="btn btn-primary btn-block">Se Connecter</button>
+        <button type="button" id="go-to-setup" class="btn btn-secondary btn-block hidden">Configurer l'établissement</button>
+        <p class="text-center" style="margin-top:15px;font-size:0.8rem;">
+          <span style="color:var(--text-muted);">Serveur : </span>
+          <span id="login-server-url-display" style="font-weight:600;color:var(--primary);">...</span>
+          <a href="#" id="change-server-link" style="margin-left:5px;color:var(--accent);text-decoration:none;font-weight:600;">(Modifier)</a>
+        </p>
+      </form>
+    </div>
+  </div>
+
+  <!-- ================= CASHIER WORKSPACE ================= -->
+  <div id="cashier-screen" class="screen hidden">
+    <!-- Header -->
+    <header class="app-header">
+      <div class="header-brand">
+        <span class="brand-logo">👑</span>
+        <div>
+          <h2>Golden Caisse Pro</h2>
+          <p id="cashier-hotel-name" class="header-hotel-name">GOLDEN PALACE HÔTEL</p>
+        </div>
+      </div>
+      <div class="header-user">
+        <span class="user-role-badge">Caissière</span>
+        <span id="cashier-user-name" class="user-name">...</span>
+        <button id="cashier-logout" class="btn btn-sm btn-danger-outline">Déconnexion</button>
+      </div>
+    </header>
+
+    <!-- Main Container -->
+    <main class="app-container">
+      <!-- Top Status Cards -->
+      <section class="cash-status-cards">
+        <div id="card-cp" class="cash-card">
+          <div class="cash-card-header">
+            <h3>Caisse Principale</h3>
+            <span id="cp-status-badge" class="badge badge-closed">Fermée</span>
+          </div>
+          <div class="cash-card-body">
+            <p class="balance-label">Solde Actuel</p>
+            <p id="cp-card-balance" class="balance-value">0</p>
+            <p id="cp-card-info" class="card-extra-info">Ouvrir pour enregistrer des pièces</p>
+          </div>
+        </div>
+
+        <div id="card-ce" class="cash-card">
+          <div class="cash-card-header">
+            <h3>Caisse d'Exploitation</h3>
+            <span id="ce-status-badge" class="badge badge-closed">Fermée</span>
+          </div>
+          <div class="cash-card-body">
+            <p class="balance-label">Solde Actuel</p>
+            <p id="ce-card-balance" class="balance-value">0</p>
+            <p id="ce-card-info" class="card-extra-info">Ouvrir pour enregistrer des ventes</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- App Tabs -->
+      <nav class="tab-navigation">
+        <button class="tab-btn active" data-tab="tab-caisse-principale">Caisse Principale</button>
+        <button class="tab-btn" data-tab="tab-caisse-exploitation">Caisse d'Exploitation</button>
+        <button class="tab-btn" data-tab="tab-regularisations">Régularisations Acheteuse</button>
+        <button class="tab-btn" data-tab="tab-historique-caissiere">Historique & Recherche</button>
+      </nav>
+
+      <!-- Tab Content Area -->
+      <div class="tab-content">
+        
+        <!-- Tab 1: Caisse Principale -->
+        <div id="tab-caisse-principale" class="tab-pane active">
+          <div class="pane-actions">
+            <button id="btn-cp-open" class="btn btn-success">🔑 Ouverture de Caisse</button>
+            <button id="btn-cp-in" class="btn btn-primary hidden-closed-cp">📥 Enregistrer une Entrée</button>
+            <button id="btn-cp-out" class="btn btn-warning hidden-closed-cp">📤 Enregistrer une Sortie (Décaissement)</button>
+            <button id="btn-cp-transfer" class="btn btn-info hidden-closed-cp">⇄ Transfert de Fonds</button>
+            <button id="btn-cp-close" class="btn btn-danger hidden-closed-cp">🔒 Fermeture de Caisse</button>
+          </div>
+
+          <!-- Daily Alert for Unjustified Pieces -->
+          <div id="cp-unjustified-alert" class="alert-box alert-warning hidden">
+            <div class="alert-header">
+              <span class="alert-icon">⚠️</span>
+              <h4>Alerte : Pièces justificatives en attente</h4>
+            </div>
+            <div class="alert-content">
+              <p>Les pièces suivantes ont été décaissées mais attendent des justificatifs :</p>
+              <div class="table-responsive select-limit-height">
+                <table class="data-table compact">
+                  <thead>
+                    <tr>
+                      <th>ID</th>
+                      <th>Bénéficiaire</th>
+                      <th>Nature / Objet</th>
+                      <th>Montant</th>
+                      <th>Date / Heure</th>
+                      <th>Action</th>
+                    </tr>
+                  </thead>
+                  <tbody id="cp-unjustified-list">
+                    <!-- Dynamic Rows -->
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          <div class="section-title-row">
+            <h3>Opérations du jour (Caisse Principale)</h3>
+          </div>
+          <div class="table-responsive">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>N° Bon</th>
+                  <th>Date / Heure</th>
+                  <th>Catégorie</th>
+                  <th>Nature de l'opération</th>
+                  <th>Objet du décaissement</th>
+                  <th>Bénéficiaire</th>
+                  <th>Entrées</th>
+                  <th>Sorties</th>
+                  <th>Statut</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody id="cp-today-operations">
+                <tr><td colspan="10" class="text-center">Aucune opération aujourd'hui.</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Tab 2: Caisse d'Exploitation -->
+        <div id="tab-caisse-exploitation" class="tab-pane">
+          <div class="pane-actions">
+            <button id="btn-ce-open" class="btn btn-success">🔑 Ouverture de Caisse</button>
+            <button id="btn-ce-in" class="btn btn-primary hidden-closed-ce">📥 Enregistrer une Entrée</button>
+            <button id="btn-ce-out" class="btn btn-warning hidden-closed-ce">📤 Enregistrer une Sortie</button>
+            <button id="btn-ce-transfer" class="btn btn-info hidden-closed-ce">⇄ Transfert de Fonds</button>
+            <button id="btn-ce-close" class="btn btn-danger hidden-closed-ce">🔒 Fermeture de Caisse</button>
+          </div>
+
+          <div class="section-title-row">
+            <h3>Opérations du jour (Caisse d'Exploitation)</h3>
+          </div>
+          <div class="table-responsive">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>N° Bon</th>
+                  <th>Date / Heure</th>
+                  <th>Catégorie / Origine</th>
+                  <th>Nature de l'opération</th>
+                  <th>Objet</th>
+                  <th>Bénéficiaire</th>
+                  <th>Entrées</th>
+                  <th>Sorties</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody id="ce-today-operations">
+                <tr><td colspan="9" class="text-center">Aucune opération aujourd'hui.</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Tab 3: Régularisations Acheteuse -->
+        <div id="tab-regularisations" class="tab-pane">
+          <div class="grid-two-columns">
+            <!-- Left Panel: Create Reconciliation -->
+            <div class="card-flat">
+              <h3>Nouvelle Régularisation (Hebdomadaire)</h3>
+              <p class="subtitle">Sélectionnez la période pour extraire les dépenses de l'acheteuse à régulariser.</p>
+              
+              <div class="date-filters-row">
+                <div class="input-group">
+                  <label for="regul-date-start">Date de début</label>
+                  <input type="date" id="regul-date-start">
+                </div>
+                <div class="input-group">
+                  <label for="regul-date-end">Date de fin</label>
+                  <input type="date" id="regul-date-end">
+                </div>
+              </div>
+
+              <div class="regul-actions">
+                <button id="btn-regul-load" class="btn btn-primary">🔍 Charger les opérations</button>
+                <button id="btn-regul-print-pre" class="btn btn-secondary hidden">🖨️ Imprimer l'état</button>
+              </div>
+
+              <div id="regul-items-container" class="regul-items-box hidden">
+                <div class="table-responsive">
+                  <table class="data-table">
+                    <thead>
+                      <tr>
+                        <th>Date</th>
+                        <th>Nature / Objet</th>
+                        <th>Avance Octroyée</th>
+                        <th>Réellement Dépensé</th>
+                        <th>Écart</th>
+                      </tr>
+                    </thead>
+                    <tbody id="regul-items-list">
+                      <!-- Dynamic rows -->
+                    </tbody>
+                    <tfoot>
+                      <tr>
+                        <th colspan="2" class="text-right">Totaux:</th>
+                        <th id="regul-total-outflow">0</th>
+                        <th id="regul-total-spent">0</th>
+                        <th id="regul-total-gap">0</th>
+                      </tr>
+                    </tfoot>
+                  </table>
+                </div>
+                <div class="regul-submit-row">
+                  <p class="info-bubble">L'état sera soumis au RAF pour validation. Après visa, vous pourrez finaliser la régularisation pour générer le rééquilibrage de caisse.</p>
+                  <button id="btn-regul-submit" class="btn btn-success btn-lg">🚀 Transmettre pour validation au RAF</button>
+                </div>
+              </div>
+            </div>
+
+            <!-- Right Panel: History of Reconciliations -->
+            <div class="card-flat">
+              <h3>Historique des Régularisations</h3>
+              <p class="subtitle">Suivi des états transmis, validés et finalisés.</p>
+              <div class="table-responsive">
+                <table class="data-table">
+                  <thead>
+                    <tr>
+                      <th>Régul N°</th>
+                      <th>Période</th>
+                      <th>Date Envoi</th>
+                      <th>Écart</th>
+                      <th>Statut</th>
+                      <th>Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody id="regul-history-list">
+                    <!-- Dynamic rows -->
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Tab 4: Historique & Recherche (Caissière) -->
+        <div id="tab-historique-caissiere" class="tab-pane">
+          <div class="search-bar-box">
+            <div class="search-row-inputs">
+              <div class="input-group">
+                <label>Caisse</label>
+                <select id="hist-caisse">
+                  <option value="">Toutes les caisses</option>
+                  <option value="principale">Caisse Principale</option>
+                  <option value="exploitation">Caisse d'Exploitation</option>
+                </select>
+              </div>
+              <div class="input-group">
+                <label>Type d'opération</label>
+                <select id="hist-type">
+                  <option value="">Tous</option>
+                  <option value="entree">Entrées</option>
+                  <option value="sortie">Sorties</option>
+                </select>
+              </div>
+              <div class="input-group">
+                <label>Date Début</label>
+                <input type="date" id="hist-start-date">
+              </div>
+              <div class="input-group">
+                <label>Date Fin</label>
+                <input type="date" id="hist-end-date">
+              </div>
+            </div>
+            <div class="search-row-inputs">
+              <div class="input-group">
+                <label>Recherche libre (Bénéficiaire, Nature, Objet, Montant)</label>
+                <input type="text" id="hist-query" placeholder="Saisissez votre recherche...">
+              </div>
+              <div class="input-group align-end">
+                <button id="btn-hist-search" class="btn btn-primary">🔍 Rechercher</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="table-responsive">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>N° Bon</th>
+                  <th>Caisse</th>
+                  <th>Date</th>
+                  <th>Type</th>
+                  <th>Catégorie</th>
+                  <th>Nature / Objet</th>
+                  <th>Bénéficiaire</th>
+                  <th>Montant</th>
+                  <th>Statut Justif.</th>
+                  <th>Auteur</th>
+                  <th>Action</th>
+                </tr>
+              </thead>
+              <tbody id="hist-results-table">
+                <!-- Search Results -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+      </div>
+    </main>
+  </div>
+
+  <!-- ================= RAF WORKSPACE ================= -->
+  <div id="raf-screen" class="screen hidden">
+    <!-- Header -->
+    <header class="app-header">
+      <div class="header-brand">
+        <span class="brand-logo">👑</span>
+        <div>
+          <h2>Golden Caisse Pro</h2>
+          <p id="raf-hotel-name" class="header-hotel-name">GOLDEN PALACE HÔTEL</p>
+        </div>
+      </div>
+      <div class="header-user">
+        <span class="user-role-badge badge-raf">RAF</span>
+        <span id="raf-user-name" class="user-name">...</span>
+        <button id="raf-logout" class="btn btn-sm btn-danger-outline">Déconnexion</button>
+      </div>
+    </header>
+
+    <!-- Main Container -->
+    <main class="app-container">
+      <!-- App Tabs -->
+      <nav class="tab-navigation">
+        <button class="tab-btn active" data-tab="tab-raf-dashboard">Tableau de Bord (KPI)</button>
+        <button class="tab-btn" data-tab="tab-raf-validation">
+          Validation Régul. 
+          <span id="badge-validation-count" class="badge-notif hidden">0</span>
+        </button>
+        <button class="tab-btn" data-tab="tab-raf-history">Historique Général des Caisses</button>
+        <button class="tab-btn" data-tab="tab-raf-params">Paramètres & Utilisateurs</button>
+      </nav>
+
+      <!-- Tab Content Area -->
+      <div class="tab-content">
+        
+        <!-- Tab 1: Tableau de Bord -->
+        <div id="tab-raf-dashboard" class="tab-pane active">
+          <!-- KPI Row -->
+          <div class="kpi-grid">
+            <div class="kpi-card">
+              <h3>Solde Caisse Principale</h3>
+              <p id="kpi-cp-balance" class="kpi-value">0</p>
+              <div class="kpi-footer">
+                <span id="kpi-cp-status" class="badge">...</span>
+                <span>Aujourd'hui: <b id="kpi-cp-in">0</b> in / <b id="kpi-cp-out">0</b> out</span>
+              </div>
+            </div>
+
+            <div class="kpi-card">
+              <h3>Solde Caisse d'Exploitation</h3>
+              <p id="kpi-ce-balance" class="kpi-value">0</p>
+              <div class="kpi-footer">
+                <span id="kpi-ce-status" class="badge">...</span>
+                <span>Aujourd'hui: <b id="kpi-ce-in">0</b> in / <b id="kpi-ce-out">0</b> out</span>
+              </div>
+            </div>
+
+            <div class="kpi-card alert-card">
+              <h3>Pièces non justifiées</h3>
+              <p id="kpi-unjust-count" class="kpi-value text-warning">0</p>
+              <div class="kpi-footer">
+                <span>Montant total en attente : <b id="kpi-unjust-amount">0</b></span>
+              </div>
+            </div>
+
+            <div class="kpi-card">
+              <h3>Régularisations à valider</h3>
+              <p id="kpi-pending-recs" class="kpi-value text-info">0</p>
+              <div class="kpi-footer">
+                <span>Nécessite le visa du RAF pour déblocage</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Visual Graph / Summary table of today's activities -->
+          <div class="grid-two-columns margin-top-lg">
+            <div class="card-flat">
+              <h3>État de session active (Caisse Principale)</h3>
+              <div class="session-info-details" id="raf-cp-session-details">
+                <p>Aucune session active enregistrée.</p>
+              </div>
+            </div>
+            <div class="card-flat">
+              <h3>État de session active (Caisse d'Exploitation)</h3>
+              <div class="session-info-details" id="raf-ce-session-details">
+                <p>Aucune session active enregistrée.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Tab 2: Validation Régul. -->
+        <div id="tab-raf-validation" class="tab-pane">
+          <div class="card-flat">
+            <h3>Demandes de Régularisation en Attente de Validation</h3>
+            <p class="subtitle">Veuillez vérifier les écarts calculés par la caissière et apposer votre visa de validation.</p>
+            
+            <div id="raf-pending-reconciliations" class="reconciliations-container">
+              <p class="text-center">Aucune régularisation en attente de validation.</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Tab 3: Historique Général des Caisses (Divisé en 2) -->
+        <div id="tab-raf-history" class="tab-pane">
+          <div class="history-split-container">
+            
+            <!-- Column Left: Caisse Principale -->
+            <div class="history-column">
+              <div class="column-header-row">
+                <h3>1. Historique Caisse Principale</h3>
+                <button id="btn-cp-print-history" class="btn btn-sm btn-secondary">🖨️ Imprimer la sélection</button>
+              </div>
+              
+              <div class="search-bar-box compact">
+                <div class="row-inputs">
+                  <div class="input-group">
+                    <input type="date" id="raf-cp-hist-start" placeholder="Date début">
+                  </div>
+                  <div class="input-group">
+                    <input type="date" id="raf-cp-hist-end" placeholder="Date fin">
+                  </div>
+                  <div class="input-group">
+                    <input type="text" id="raf-cp-hist-query" placeholder="Recherche libre...">
+                  </div>
+                  <button id="btn-raf-cp-search" class="btn btn-primary btn-sm">🔍</button>
+                </div>
+              </div>
+
+              <div class="table-responsive select-limit-height-large">
+                <table class="data-table compact">
+                  <thead>
+                    <tr>
+                      <th>Date</th>
+                      <th>Bénéficiaire</th>
+                      <th>Nature / Objet</th>
+                      <th>Entrée</th>
+                      <th>Sortie</th>
+                      <th>Statut</th>
+                    </tr>
+                  </thead>
+                  <tbody id="raf-cp-history-rows">
+                    <!-- Rows -->
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <!-- Column Right: Caisse d'Exploitation -->
+            <div class="history-column">
+              <div class="column-header-row">
+                <h3>2. Historique Caisse d'Exploitation</h3>
+                <button id="btn-ce-print-history" class="btn btn-sm btn-secondary">🖨️ Imprimer la sélection</button>
+              </div>
+              
+              <div class="search-bar-box compact">
+                <div class="row-inputs">
+                  <div class="input-group">
+                    <input type="date" id="raf-ce-hist-start" placeholder="Date début">
+                  </div>
+                  <div class="input-group">
+                    <input type="date" id="raf-ce-hist-end" placeholder="Date fin">
+                  </div>
+                  <div class="input-group">
+                    <input type="text" id="raf-ce-hist-query" placeholder="Recherche libre...">
+                  </div>
+                  <button id="btn-raf-ce-search" class="btn btn-primary btn-sm">🔍</button>
+                </div>
+              </div>
+
+              <div class="table-responsive select-limit-height-large">
+                <table class="data-table compact">
+                  <thead>
+                    <tr>
+                      <th>Date</th>
+                      <th>Bénéficiaire</th>
+                      <th>Nature / Objet</th>
+                      <th>Entrée</th>
+                      <th>Sortie</th>
+                    </tr>
+                  </thead>
+                  <tbody id="raf-ce-history-rows">
+                    <!-- Rows -->
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+          </div>
+        </div>
+
+        <!-- Tab 4: Paramètres & Utilisateurs -->
+        <div id="tab-raf-params" class="tab-pane">
+          <div class="grid-two-columns">
+            <!-- Company settings -->
+            <div class="card-flat">
+              <h3>Informations de l'Hôtel</h3>
+              <p class="subtitle">Ces détails apparaîtront sur les bons d'entrée et de sortie ainsi que sur les rapports.</p>
+              <form id="company-settings-form">
+                <div class="input-group">
+                  <label for="company-name">Nom de l'Établissement</label>
+                  <input type="text" id="company-name" required>
+                </div>
+                <div class="input-group">
+                  <label for="company-address">Adresse Physique</label>
+                  <input type="text" id="company-address">
+                </div>
+                <div class="row-inputs">
+                  <div class="input-group">
+                    <label for="company-phone">Téléphone</label>
+                    <input type="text" id="company-phone">
+                  </div>
+                  <div class="input-group">
+                    <label for="company-email">Adresse Email</label>
+                    <input type="email" id="company-email">
+                  </div>
+                </div>
+                <button type="submit" class="btn btn-primary">Enregistrer les Modifications</button>
+              </form>
+            </div>
+
+            <!-- User settings -->
+            <div class="card-flat">
+              <h3>Création & Gestion des Agents</h3>
+              <p class="subtitle">Ajouter des accès sécurisés pour les caissières ou d'autres membres de la direction.</p>
+              
+              <form id="create-user-form" class="margin-bottom-lg">
+                <div class="input-group">
+                  <label for="new-user-name">Nom Complet de l'Agent</label>
+                  <input type="text" id="new-user-name" required placeholder="ex: Alice Konan">
+                </div>
+                <div class="row-inputs">
+                  <div class="input-group">
+                    <label for="new-user-username">Identifiant de connexion</label>
+                    <input type="text" id="new-user-username" required placeholder="ex: alice.caisse">
+                  </div>
+                  <div class="input-group">
+                    <label for="new-user-password">Mot de passe</label>
+                    <input type="password" id="new-user-password" required placeholder="Saisir mot de passe">
+                  </div>
+                </div>
+                <div class="input-group">
+                  <label for="new-user-role">Rôle de l'Agent</label>
+                  <select id="new-user-role" required>
+                    <option value="caissiere">Caissière (Accès Caisses)</option>
+                    <option value="raf">RAF (Accès Audit / Contrôle)</option>
+                  </select>
+                </div>
+                <button type="submit" class="btn btn-success">Ajouter le Nouvel Agent</button>
+              </form>
+
+              <h4>Liste des Agents Actifs</h4>
+              <div class="table-responsive select-limit-height">
+                <table class="data-table compact">
+                  <thead>
+                    <tr>
+                      <th>Nom complet</th>
+                      <th>Identifiant</th>
+                      <th>Rôle</th>
+                    </tr>
+                  </thead>
+                  <tbody id="active-agents-list">
+                    <!-- Dynamic -->
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </main>
+  </div>
+
+
+  <!-- ==================================================== -->
+  <!-- ==================== MODALS ======================== -->
+  <!-- ==================================================== -->
+
+  <!-- Modal Wrapper -->
+  <div id="modal-container" class="modal-overlay hidden">
+    
+    <!-- Modal 1: Ouverture de Caisse -->
+    <div id="modal-open-cash" class="modal-box hidden">
+      <div class="modal-header">
+        <h3 id="open-cash-title">Ouverture de Session de Caisse</h3>
+        <button class="modal-close">&times;</button>
+      </div>
+      <form id="open-cash-form">
+        <input type="hidden" id="open-cash-type">
+        <div class="input-group">
+          <label for="open-cash-date">Date comptable de la journée</label>
+          <input type="date" id="open-cash-date" required>
+        </div>
+        <div class="input-group">
+          <label for="open-cash-balance">Montant avec lequel vous débutez la journée</label>
+          <input type="text" id="open-cash-balance" class="amount-format" required placeholder="ex: 10 000">
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary modal-cancel">Annuler</button>
+          <button type="submit" class="btn btn-primary">Valider l'Ouverture</button>
+        </div>
+      </form>
+    </div>
+
+    <!-- Modal 2: Enregistrer une Entrée -->
+    <div id="modal-add-inflow" class="modal-box hidden">
+      <div class="modal-header">
+        <h3 id="add-inflow-title">Enregistrement d'un Bon d'Entrée</h3>
+        <button class="modal-close">&times;</button>
+      </div>
+      <form id="add-inflow-form">
+        <input type="hidden" id="inflow-cash-type">
+        
+        <div class="input-group" id="group-inflow-cat-cp">
+          <label for="inflow-category-cp">Catégorie d'Entrée</label>
+          <select id="inflow-category-cp">
+            <option value="appro_raf">Approvisionnement du RAF</option>
+            <option value="recettes_boutique">Recettes des boutiques du HALL</option>
+            <option value="autres">Autres</option>
+          </select>
+        </div>
+
+        <div class="input-group hidden" id="group-inflow-cat-ce">
+          <label for="inflow-category-ce">Origine de la Recette</label>
+          <select id="inflow-category-ce">
+            <option value="reception">La Réception</option>
+            <option value="restaurant">Le Restaurant</option>
+            <option value="bar_hall">Le Bar HALL</option>
+            <option value="piscine">La Piscine</option>
+            <option value="autres">Autres</option>
+          </select>
+        </div>
+
+        <div class="input-group">
+          <label for="inflow-nature">Nature de l'opération (Libellé principal)</label>
+          <input type="text" id="inflow-nature" required placeholder="ex: Vente de la boutique A">
+        </div>
+
+        <div class="input-group">
+          <label for="inflow-object">Objet de l'entrée / Détail</label>
+          <input type="text" id="inflow-object" placeholder="ex: Versement espèces du 23/06">
+        </div>
+
+        <div class="input-group">
+          <label for="inflow-beneficiary">Bénéficiaire (Déposant)</label>
+          <input type="text" id="inflow-beneficiary" required placeholder="Nom de la personne qui verse">
+        </div>
+
+        <div class="input-group">
+          <label for="inflow-amount">Montant de l'opération</label>
+          <input type="text" id="inflow-amount" class="amount-format" required placeholder="ex: 50 000">
+        </div>
+
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary modal-cancel">Annuler</button>
+          <button type="submit" class="btn btn-primary">Valider l'Entrée</button>
+        </div>
+      </form>
+    </div>
+
+    <!-- Modal 3: Enregistrer une Sortie (Caisse Principale) -->
+    <div id="modal-add-outflow-cp" class="modal-box hidden">
+      <div class="modal-header">
+        <h3>Enregistrement d'un Bon de Sortie (Caisse Principale)</h3>
+        <button class="modal-close">&times;</button>
+      </div>
+      <!-- Scrollable wrapper container ("glisseur") -->
+      <div class="modal-scroll-container">
+        <form id="add-outflow-cp-form">
+          <div class="input-group">
+            <label for="outflow-cp-beneficiary-type">Type de bénéficiaire</label>
+            <select id="outflow-cp-beneficiary-type" required>
+              <option value="">-- Sélectionner type --</option>
+              <option value="acheteuse">Acheteuse</option>
+              <option value="fournisseur">Fournisseurs</option>
+              <option value="banque">Banques</option>
+              <option value="autre">Autres</option>
+            </select>
+          </div>
+
+          <div class="input-group">
+            <label for="outflow-cp-beneficiary-name">Nom du bénéficiaire</label>
+            <input type="text" id="outflow-cp-beneficiary-name" required placeholder="Nom de la personne ou entreprise">
+          </div>
+
+          <div class="input-group">
+            <label for="outflow-cp-nature">Nature de l'opération</label>
+            <select id="outflow-cp-nature" required>
+              <option value="dépenses d’exploitation">Dépenses d’exploitation</option>
+              <option value="règlements des fournisseurs">Règlements des fournisseurs</option>
+              <option value="versements en banque">Versements en banque</option>
+              <option value="autres">Autres</option>
+            </select>
+          </div>
+
+          <div class="input-group">
+            <label for="outflow-cp-object">Objet du décaissement</label>
+            <input type="text" id="outflow-cp-object" required placeholder="Détaillez le motif de la dépense">
+          </div>
+
+          <div class="input-group">
+            <label for="outflow-cp-amount">Montant de l'opération</label>
+            <input type="text" id="outflow-cp-amount" class="amount-format" required placeholder="ex: 15 000">
+          </div>
+
+          <div class="input-group checkbox-group">
+            <label class="checkbox-container">
+              <input type="checkbox" id="outflow-cp-needs-justification">
+              <span class="checkmark"></span>
+              En attente de pièces justificatives
+            </label>
+          </div>
+
+          <div class="modal-footer sticky-footer">
+            <button type="button" class="btn btn-secondary modal-cancel">Annuler</button>
+            <button type="submit" class="btn btn-primary">Valider la Sortie</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- Modal 4: Enregistrer une Sortie (Caisse d'Exploitation) -->
+    <div id="modal-add-outflow-ce" class="modal-box hidden">
+      <div class="modal-header">
+        <h3>Enregistrement d'un Bon de Sortie (Caisse d'Exploitation)</h3>
+        <button class="modal-close">&times;</button>
+      </div>
+      <form id="add-outflow-ce-form">
+        <div class="input-group">
+          <label for="outflow-ce-nature">Motif de Sortie</label>
+          <select id="outflow-ce-nature" required>
+            <option value="remise de fonds au DAF">Remise de fonds au DAF</option>
+            <option value="paiement de commissions">Paiement de commissions</option>
+            <option value="autres">Autres</option>
+          </select>
+        </div>
+
+        <div class="input-group">
+          <label for="outflow-ce-object">Objet de la sortie</label>
+          <input type="text" id="outflow-ce-object" required placeholder="Détaillez le versement">
+        </div>
+
+        <div class="input-group">
+          <label for="outflow-ce-beneficiary">Bénéficiaire</label>
+          <input type="text" id="outflow-ce-beneficiary" required placeholder="Nom du bénéficiaire / destinataire">
+        </div>
+
+        <div class="input-group">
+          <label for="outflow-ce-amount">Montant de l'opération</label>
+          <input type="text" id="outflow-ce-amount" class="amount-format" required placeholder="ex: 100 000">
+        </div>
+
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary modal-cancel">Annuler</button>
+          <button type="submit" class="btn btn-primary">Valider la Sortie</button>
+        </div>
+      </form>
+    </div>
+
+    <!-- Modal 5: Transfert de fonds entre caisses -->
+    <div id="modal-transfer-cash" class="modal-box hidden">
+      <div class="modal-header">
+        <h3>Transfert Inter-Caisse (Alimentation)</h3>
+        <button class="modal-close">&times;</button>
+      </div>
+      <form id="transfer-cash-form">
+        <div class="input-group">
+          <label for="transfer-source">Caisse émettrice (Source)</label>
+          <select id="transfer-source" required>
+            <option value="principale">Caisse Principale</option>
+            <option value="exploitation">Caisse d'Exploitation</option>
+          </select>
+        </div>
+        <div class="input-group">
+          <label for="transfer-target">Caisse réceptrice (Cible)</label>
+          <select id="transfer-target" required disabled>
+            <!-- Auto populated/updated based on source selection -->
+            <option value="exploitation">Caisse d'Exploitation</option>
+          </select>
+        </div>
+        <div class="input-group">
+          <label for="transfer-amount">Montant à transférer</label>
+          <input type="text" id="transfer-amount" class="amount-format" required placeholder="ex: 20 000">
+        </div>
+        <p class="info-bubble warning">Note : Les deux sessions de caisse doivent être ouvertes pour valider le transfert en temps réel.</p>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary modal-cancel">Annuler</button>
+          <button type="submit" class="btn btn-primary">Valider le Transfert</button>
+        </div>
+      </form>
+    </div>
+
+    <!-- Modal 6: Fermeture de Caisse & Billetage -->
+    <div id="modal-close-cash" class="modal-box hidden large-modal">
+      <div class="modal-header">
+        <h3 id="close-cash-title">Clôture de Caisse & Billetage</h3>
+        <button class="modal-close">&times;</button>
+      </div>
+      <form id="close-cash-form">
+        <input type="hidden" id="close-cash-type">
+        
+        <div class="billetage-grid-layout">
+          <!-- Balance Summary Column -->
+          <div class="billetage-summary-side">
+            <h4>Récapitulatif Comptable</h4>
+            <div class="summary-line">
+              <span>Solde initial :</span>
+              <span id="close-init-balance">0</span>
+            </div>
+            <div class="summary-line">
+              <span>Total Entrées :</span>
+              <span id="close-total-inflows" class="text-success">+0</span>
+            </div>
+            <div class="summary-line">
+              <span>Total Sorties :</span>
+              <span id="close-total-outflows" class="text-danger">-0</span>
+            </div>
+            <div class="summary-line highlight-balance">
+              <span>Solde théorique attendu :</span>
+              <span id="close-expected-balance">0</span>
+            </div>
+            
+            <div class="summary-line highlight-counted margin-top-md">
+              <span>Solde physique compté :</span>
+              <span id="close-counted-balance-display">0</span>
+            </div>
+
+            <div class="summary-line" id="close-diff-row">
+              <span>Écart de caisse :</span>
+              <span id="close-diff-balance">0</span>
+            </div>
+          </div>
+
+          <!-- Billetage Inputs Column -->
+          <div class="billetage-inputs-side">
+            <h4>Billetage (Comptage Physique)</h4>
+            <div class="billetage-table-wrapper">
+              <table class="billetage-table">
+                <thead>
+                  <tr>
+                    <th>Billet / Pièce</th>
+                    <th>Quantité</th>
+                    <th>Sous-total</th>
+                  </tr>
+                </thead>
+                <tbody id="billetage-rows">
+                  <!-- JS will dynamically populate standard denominations: 10000, 5000, 2000, 1000, 500, 250, 200, 100, 50, 25, 10, 5, 2, 1 -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary modal-cancel">Annuler</button>
+          <button type="submit" class="btn btn-danger">Valider et Fermer la Caisse</button>
+        </div>
+      </form>
+    </div>
+
+  </div> <!-- End Modal Container -->
+
+
+  <!-- ==================================================== -->
+  <!-- ================= PRINTING LAYOUTS ================= -->
+  <!-- ==================================================== -->
+
+  <!-- Printable Bon (Voucher) Container -->
+  <div id="print-bon-container" class="print-only">
+    <!-- Header of the print document -->
+    <div class="print-header">
+      <div class="print-hotel-info">
+        <h1 id="print-company-name">GOLDEN PALACE HÔTEL</h1>
+        <p id="print-company-address">Lomé, Togo</p>
+        <p id="print-company-phone">Tél: +228 90 00 00 00</p>
+      </div>
+      <div class="print-voucher-type">
+        <h2 id="print-voucher-title">BON DE SORTIE DE CAISSE</h2>
+        <p>Numéro : <span id="print-voucher-number">001</span></p>
+        <p>Caisse : <span id="print-voucher-caisse">Principale</span></p>
+      </div>
+    </div>
+
+    <!-- Details Table -->
+    <table class="print-details-table">
+      <tr>
+        <td class="label">Date / Heure :</td>
+        <td id="print-date-time" class="val">23/06/2026 21:00</td>
+      </tr>
+      <tr>
+        <td class="label">Bénéficiaire :</td>
+        <td id="print-beneficiary" class="val">Mlle Yao (Acheteuse)</td>
+      </tr>
+      <tr id="print-row-nature">
+        <td class="label">Nature Opération :</td>
+        <td id="print-nature" class="val">Dépenses d'exploitation</td>
+      </tr>
+      <tr id="print-row-object">
+        <td class="label">Objet / Motif :</td>
+        <td id="print-object" class="val">Achat de denrées pour le restaurant principal</td>
+      </tr>
+      <tr>
+        <td class="label">Montant :</td>
+        <td class="val highlight-amount"><span id="print-amount-num">150 000</span> FCFA</td>
+      </tr>
+      <tr>
+        <td class="label">Arrêté à la somme de :</td>
+        <td id="print-amount-words" class="val amount-words">Cent cinquante mille francs CFA</td>
+      </tr>
+      <tr id="print-row-justification" class="hidden">
+        <td class="label text-danger">Statut justificatif :</td>
+        <td class="val text-danger font-bold">PIÈCE EN ATTENTE DE PIÈCES JUSTIFICATIVES</td>
+      </tr>
+    </table>
+
+    <!-- Signature Areas -->
+    <div class="print-signatures">
+      <div class="print-sign-box">
+        <p>La Caissière</p>
+        <div class="sign-space"></div>
+        <p id="print-sign-caissiere">Nom Caissière</p>
+      </div>
+      <div class="print-sign-box">
+        <p>Le Bénéficiaire / Déposant</p>
+        <div class="sign-space"></div>
+        <p id="print-sign-beneficiary">Nom Bénéficiaire</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Printable Closing Report Container -->
+  <div id="print-report-container" class="print-only">
+    <div class="print-header">
+      <div class="print-hotel-info">
+        <h1 id="print-report-company-name">GOLDEN PALACE HÔTEL</h1>
+        <p>Lomé, Togo</p>
+      </div>
+      <div class="print-voucher-type">
+        <h2>RAPPORT DE FERMETURE DE CAISSE</h2>
+        <p>Date : <span id="print-report-date">23/06/2026</span></p>
+        <p>Caisse : <span id="print-report-caisse">Principale</span></p>
+      </div>
+    </div>
+
+    <table class="print-details-table">
+      <tr>
+        <td class="label">Ouverte par :</td>
+        <td id="print-report-opened-by" class="val">...</td>
+        <td class="label">Fermée par :</td>
+        <td id="print-report-closed-by" class="val">...</td>
+      </tr>
+      <tr>
+        <td class="label">Ouverture le :</td>
+        <td id="print-report-opened-at" class="val">...</td>
+        <td class="label">Fermeture le :</td>
+        <td id="print-report-closed-at" class="val">...</td>
+      </tr>
+    </table>
+
+    <h3 class="margin-top-md">Résumé Comptable</h3>
+    <table class="print-summary-table">
+      <thead>
+        <tr>
+          <th>Solde Initial (A)</th>
+          <th>Total Entrées (B)</th>
+          <th>Total Sorties (C)</th>
+          <th>Solde Théorique (A+B-C)</th>
+          <th>Solde Physique (D)</th>
+          <th>Écart (D - Théorique)</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td id="print-report-init-bal">0</td>
+          <td id="print-report-inflows" class="text-success">0</td>
+          <td id="print-report-outflows" class="text-danger">0</td>
+          <td id="print-report-expected-bal">0</td>
+          <td id="print-report-counted-bal">0</td>
+          <td id="print-report-gap">0</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h3 class="margin-top-md">Détail du Billetage Compté</h3>
+    <div class="print-billetage-grid">
+      <table class="print-summary-table select-width-half inline-table">
+        <thead>
+          <tr>
+            <th>Dénomination</th>
+            <th>Quantité</th>
+            <th>Total</th>
+          </tr>
+        </thead>
+        <tbody id="print-report-billetage-rows-1">
+          <!-- Denoms 10000 to 500 -->
+        </tbody>
+      </table>
+
+      <table class="print-summary-table select-width-half inline-table">
+        <thead>
+          <tr>
+            <th>Dénomination</th>
+            <th>Quantité</th>
+            <th>Total</th>
+          </tr>
+        </thead>
+        <tbody id="print-report-billetage-rows-2">
+          <!-- Denoms 250 to 1 -->
+        </tbody>
+      </table>
+    </div>
+
+    <div class="print-signatures margin-top-lg">
+      <div class="print-sign-box">
+        <p>La Caissière (Signature)</p>
+        <div class="sign-space-large"></div>
+      </div>
+      <div class="print-sign-box">
+        <p>Le Vérificateur / DAF-RAF (Signature)</p>
+        <div class="sign-space-large"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Printable Reconciliation Report Container -->
+  <div id="print-reconciliation-container" class="print-only">
+    <div class="print-header">
+      <div class="print-hotel-info">
+        <h1 id="print-recon-company-name">GOLDEN PALACE HÔTEL</h1>
+        <p>Lomé, Togo</p>
+      </div>
+      <div class="print-voucher-type">
+        <h2 id="print-recon-title">ÉTAT DE RÉGULARISATION ACHETEUSE</h2>
+        <p>Régularisation N° : <span id="print-recon-id">...</span></p>
+        <p>Période : <span id="print-recon-period">Du ... Au ...</span></p>
+      </div>
+    </div>
+
+    <table class="print-details-table">
+      <tr>
+        <td class="label">Date de création :</td>
+        <td id="print-recon-created-at" class="val">...</td>
+        <td class="label">Créé par :</td>
+        <td id="print-recon-created-by" class="val">...</td>
+      </tr>
+      <tr>
+        <td class="label">Statut actuel :</td>
+        <td id="print-recon-status" class="val font-bold">...</td>
+        <td class="label">Validé par :</td>
+        <td id="print-recon-validated-by" class="val">...</td>
+      </tr>
+    </table>
+
+    <h3 class="margin-top-md">Détail des Dépenses Réconciliées</h3>
+    <table class="print-summary-table">
+      <thead>
+        <tr>
+          <th>Date Dépense</th>
+          <th>Bénéficiaire</th>
+          <th>Nature / Objet de l'opération</th>
+          <th>Montant Avance (A)</th>
+          <th>Montant Réel Dépensé (B)</th>
+          <th>Écart (A - B)</th>
+        </tr>
+      </thead>
+      <tbody id="print-recon-rows">
+        <!-- Dynamic -->
+      </tbody>
+      <tfoot>
+        <tr>
+          <th colspan="3" class="text-right">Totaux globaux :</th>
+          <th id="print-recon-total-outflow">0</th>
+          <th id="print-recon-total-spent">0</th>
+          <th id="print-recon-total-gap">0</th>
+        </tr>
+      </tfoot>
+    </table>
+
+    <div class="print-recon-footer-summary margin-top-md card-flat">
+      <h4 id="print-recon-conclusion-title">Conclusion financière :</h4>
+      <p id="print-recon-conclusion-text">En attente de validation...</p>
+    </div>
+
+    <div class="print-signatures margin-top-lg">
+      <div class="print-sign-box">
+        <p>La Caissière (Signature)</p>
+        <div class="sign-space-large"></div>
+      </div>
+      <div class="print-sign-box">
+        <p>Le Chef de Département / Acheteuse (Signature)</p>
+        <div class="sign-space-large"></div>
+      </div>
+      <div class="print-sign-box">
+        <p>Le Contrôleur / RAF (Visa de validation)</p>
+        <div class="sign-space-large"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- JavaScript file -->
+  <script src="app.js"></script>
+</body>
+</html>
